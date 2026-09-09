@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Mole Math — Type Attack</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --sky-a:#6EC6E8;
+    --sky-b:#A9E4E0;
+    --grass-a:#8FC24A;
+    --grass-b:#5A8C3A;
+    --soil:#5B3A24;
+    --soil-dark:#3E2717;
+    --panel:#FFF8E6;
+    --panel-edge:#E8C97A;
+    --ink:#3B2A1A;
+    --ink-soft:#6B5642;
+    --sun:#FFC93C;
+    --normal:#9C6B45;
+    --normal-dark:#7A5232;
+    --golden:#FFD23F;
+    --golden-dark:#E0A400;
+    --angry:#D64545;
+    --angry-dark:#8E1F1F;
+    --freeze:#7FD8E8;
+    --freeze-dark:#3FA9C0;
+    --good:#4CA94C;
+    --bad:#D9483C;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    font-family:'Nunito',sans-serif;
+    color:var(--ink);
+    background:radial-gradient(ellipse at 50% -10%, var(--sky-b), var(--sky-a) 60%);
+    min-height:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:16px;
+  }
+  h1,h2{font-family:'Baloo 2',sans-serif; margin:0;}
+  .stage{ width:100%; max-width:640px; margin:0 auto; }
+
+  .screen{ display:none; }
+  .screen.active{ display:block; }
+
+  .card{
+    background:var(--panel);
+    border:3px solid var(--panel-edge);
+    border-radius:22px;
+    box-shadow:0 10px 0 rgba(59,42,26,0.15);
+    padding:28px 26px;
+    text-align:center;
+  }
+  .title-row{ display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:4px;}
+  .title-row .mole-emoji{ font-size:2rem; transform:translateY(2px);}
+  .card h1{ font-size:1.9rem; color:var(--soil-dark);}
+  .subtitle{ color:var(--ink-soft); font-weight:700; margin:6px 0 20px; font-size:0.95rem;}
+
+  .field-row{ display:flex; gap:14px; justify-content:center; flex-wrap:wrap; margin-bottom:22px;}
+  .field-group{ text-align:left; }
+  .field-group label{ display:block; font-weight:800; font-size:0.78rem; letter-spacing:.02em; color:var(--ink-soft); margin-bottom:6px;}
+  select, input[type=number]{
+    font-family:'Nunito',sans-serif;
+    font-weight:700;
+    font-size:1rem;
+    padding:9px 12px;
+    border-radius:12px;
+    border:2px solid var(--panel-edge);
+    background:#fff;
+    color:var(--ink);
+    width:130px;
+  }
+  select:focus, input:focus{ outline:3px solid var(--sun); outline-offset:1px;}
+
+  .btn{
+    font-family:'Baloo 2',sans-serif;
+    font-weight:700;
+    font-size:1.15rem;
+    color:#fff;
+    background:var(--good);
+    border:none;
+    border-radius:16px;
+    padding:14px 34px;
+    cursor:pointer;
+    box-shadow:0 6px 0 #386b38;
+    transition:transform .08s ease, box-shadow .08s ease;
+  }
+  .btn:hover{ filter:brightness(1.05); }
+  .btn:active{ transform:translateY(4px); box-shadow:0 2px 0 #386b38; }
+  .btn.secondary{ background:var(--normal); box-shadow:0 6px 0 var(--normal-dark); }
+  .btn.small{ font-size:0.95rem; padding:10px 18px; border-radius:12px; box-shadow:0 4px 0 #386b38; }
+
+  .rules{ text-align:left; margin:0 0 18px; font-size:0.86rem; color:var(--ink-soft); line-height:1.55;}
+  .rules b{ color:var(--ink); }
+  .legend{ display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin:14px 0 22px; font-size:0.8rem; font-weight:700;}
+  .legend span{ display:inline-flex; align-items:center; gap:5px;}
+  .dot{ width:13px; height:13px; border-radius:50%; display:inline-block;}
+  .dot.normal{ background:var(--normal);}
+  .dot.golden{ background:var(--golden);}
+  .dot.angry{ background:var(--angry);}
+  .dot.freeze{ background:var(--freeze);}
+
+  /* ---------- HUD ---------- */
+  .hud{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    background:var(--panel);
+    border:3px solid var(--panel-edge);
+    border-radius:18px;
+    padding:10px 16px;
+    margin-bottom:12px;
+    box-shadow:0 6px 0 rgba(59,42,26,0.15);
+  }
+  .hud-left{
+    font-family:'Baloo 2',sans-serif;
+    font-size:1.05rem;
+    font-weight:700;
+    color:var(--soil-dark);
+    flex:1 1 auto;
+    min-width:0;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .hud-left .streak-txt{ color:var(--golden-dark); }
+  .hud-mid{ display:flex; align-items:center; gap:12px; flex:0 0 auto;}
+  .hud-timer{
+    font-family:'Baloo 2',sans-serif;
+    font-weight:700;
+    font-size:1.05rem;
+    background:#fff;
+    border:2px solid var(--panel-edge);
+    border-radius:12px;
+    padding:5px 12px;
+    min-width:64px;
+    text-align:center;
+  }
+  .hud-timer.low{ color:var(--bad); animation:pulse .6s infinite; }
+  .hud-timer.frozen{ color:var(--freeze-dark); background:#E4F8FC; border-color:var(--freeze); }
+  @keyframes pulse{ 0%,100%{transform:scale(1);} 50%{transform:scale(1.08);} }
+  .hud-lives{ font-size:1.1rem; letter-spacing:2px; }
+  .hud-right{ display:flex; flex-direction:column; align-items:flex-end; gap:2px; flex:0 0 auto;}
+  .hud-score{ font-family:'Baloo 2',sans-serif; font-weight:800; font-size:1.25rem; color:var(--soil-dark);}
+
+  /* ---------- FIELD ---------- */
+  .meadow{
+    position:relative;
+    border-radius:20px;
+    overflow:hidden;
+    background:linear-gradient(180deg, var(--grass-a) 0%, var(--grass-b) 100%);
+    border:3px solid var(--panel-edge);
+    box-shadow:0 8px 0 rgba(59,42,26,0.15);
+    padding:26px 18px 22px;
+  }
+  .meadow::before{
+    content:"";
+    position:absolute; inset:0;
+    background-image:
+      radial-gradient(circle at 12% 20%, rgba(255,255,255,0.10) 0, transparent 45%),
+      radial-gradient(circle at 85% 75%, rgba(255,255,255,0.08) 0, transparent 45%);
+    pointer-events:none;
+  }
+  .grid{ position:relative; display:grid; gap:18px 12px; }
+  .grid.size-3{ grid-template-columns:repeat(3,1fr); }
+  .grid.size-4{ grid-template-columns:repeat(4,1fr); }
+
+  .hole{ position:relative; aspect-ratio:1/0.9; display:flex; align-items:flex-end; justify-content:center; }
+  .hole-mound{
+    position:absolute; left:4%; right:4%; bottom:6%; height:44%;
+    border-radius:50%;
+    background:radial-gradient(ellipse at 50% 30%, var(--soil) 0%, var(--soil-dark) 100%);
+    box-shadow:inset 0 6px 8px rgba(0,0,0,0.35);
+  }
+  .hole-clip{
+    position:absolute; left:0; right:0; bottom:6%; height:94%;
+    overflow:hidden;
+    display:flex; align-items:flex-end; justify-content:center;
+    border-radius:0 0 50% 50%;
+  }
+
+  .mole{
+    position:relative;
+    width:60%;
+    transform:translateY(78%);
+    transition:transform .16s cubic-bezier(.2,.9,.3,1.2);
+    z-index:2;
+  }
+  .mole.up{ transform:translateY(0%); }
+  .mole.smashed{ transform:translateY(60%) scaleY(0.4); transition:transform .12s ease-in; }
+  .mole.targeted .mole-body{ box-shadow:0 0 0 4px var(--good), inset 0 -8px 10px rgba(0,0,0,0.18); }
+
+  .mole-equation{
+    position:absolute;
+    top:-32px; left:50%; transform:translateX(-50%);
+    font-family:'Baloo 2',sans-serif;
+    font-weight:700;
+    font-size:0.98rem;
+    color:#fff;
+    background:var(--soil-dark);
+    border-radius:10px;
+    padding:3px 9px;
+    white-space:nowrap;
+    box-shadow:0 3px 0 rgba(0,0,0,0.25);
+  }
+  .mole-badge{ position:absolute; top:-12px; right:-8px; font-size:1.05rem; filter:drop-shadow(0 2px 1px rgba(0,0,0,0.3)); }
+
+  .mole-body{
+    width:100%; aspect-ratio:1/0.9; border-radius:50% 50% 46% 46%;
+    background:var(--normal); position:relative;
+    box-shadow:inset 0 -8px 10px rgba(0,0,0,0.18), 0 4px 0 rgba(0,0,0,0.15);
+  }
+  .mole-body::before, .mole-body::after{ content:""; position:absolute; top:34%; width:13%; aspect-ratio:1/1; border-radius:50%; background:#2A1D12; }
+  .mole-body::before{ left:26%; } .mole-body::after{ right:26%; }
+  .mole-nose{ position:absolute; top:52%; left:50%; transform:translateX(-50%); width:16%; aspect-ratio:1/0.75; border-radius:50%; background:#E8A9A0; }
+  .mole-cheek-l, .mole-cheek-r{ position:absolute; top:48%; width:15%; aspect-ratio:1/1; border-radius:50%; background:rgba(255,255,255,0.35); }
+  .mole-cheek-l{ left:8%; } .mole-cheek-r{ right:8%; }
+
+  .mole.golden .mole-body{ background:var(--golden); }
+  .mole.golden .mole-nose{ background:#B97A00; }
+  .mole.freeze .mole-body{ background:var(--freeze); }
+  .mole.freeze .mole-nose{ background:var(--freeze-dark); }
+  .mole.angry .mole-body{ background:var(--angry); animation:angryPulse 1s infinite; }
+  .mole.angry .mole-nose{ background:var(--angry-dark); }
+  @keyframes angryPulse{
+    0%,100%{ box-shadow:inset 0 -8px 10px rgba(0,0,0,0.18), 0 0 0 0 rgba(214,69,69,0.55); }
+    50%{ box-shadow:inset 0 -8px 10px rgba(0,0,0,0.18), 0 0 0 8px rgba(214,69,69,0); }
+  }
+
+  .fx{
+    position:absolute; left:50%; top:-8%; transform:translateX(-50%);
+    font-family:'Baloo 2',sans-serif; font-weight:800; font-size:1.05rem;
+    pointer-events:none; animation:floatUp .7s ease-out forwards; z-index:5; white-space:nowrap;
+  }
+  .fx.good{ color:var(--good); }
+  .fx.bad{ color:var(--bad); }
+  .fx.info{ color:var(--freeze-dark); }
+  .fx.steal{ color:var(--angry-dark); }
+  @keyframes floatUp{ 0%{ opacity:1; transform:translate(-50%,0); } 100%{ opacity:0; transform:translate(-50%,-38px); } }
+
+  .shake{ animation:shakeAnim .35s; }
+  @keyframes shakeAnim{
+    0%,100%{ transform:translateX(0); }
+    20%{ transform:translateX(-6px); } 40%{ transform:translateX(6px); }
+    60%{ transform:translateX(-4px); } 80%{ transform:translateX(4px); }
+  }
+
+  /* ---------- ANSWER BAR ---------- */
+  .answer-bar{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    background:var(--panel);
+    border:3px solid var(--panel-edge);
+    border-radius:18px;
+    padding:10px 12px;
+    margin-top:12px;
+    box-shadow:0 6px 0 rgba(59,42,26,0.15);
+  }
+  .answer-bar input{
+    flex:1 1 auto;
+    min-width:0;
+    font-family:'Baloo 2',sans-serif;
+    font-size:1.3rem;
+    font-weight:700;
+    padding:10px 14px;
+    border-radius:12px;
+    border:2px solid var(--panel-edge);
+    background:#fff;
+    color:var(--ink);
+    letter-spacing:0.02em;
+  }
+  .answer-bar input:focus{ outline:3px solid var(--sun); outline-offset:1px; }
+  .answer-hint{
+    font-size:0.72rem; font-weight:800; color:var(--ink-soft);
+    white-space:nowrap; flex:0 0 auto; text-align:center; line-height:1.2;
+  }
+  .answer-hint kbd{
+    display:inline-block; background:#fff; border:1px solid var(--panel-edge); border-radius:6px;
+    padding:1px 6px; font-family:'Nunito',sans-serif; font-weight:800; color:var(--ink);
+  }
+
+  .footnote{ text-align:center; margin-top:10px; font-size:0.78rem; color:var(--ink-soft); font-weight:700;}
+
+  .go-stats{ display:flex; justify-content:center; gap:22px; margin:18px 0 24px; flex-wrap:wrap;}
+  .go-stat{ text-align:center; }
+  .go-stat .num{ font-family:'Baloo 2',sans-serif; font-size:1.7rem; font-weight:800; color:var(--soil-dark); display:block;}
+  .go-stat .lbl{ font-size:0.72rem; font-weight:800; color:var(--ink-soft); }
+
+  @media (max-width:420px){
+    .card{ padding:22px 16px; }
+    .mole-equation{ font-size:0.82rem; top:-28px; padding:2px 7px;}
+    .answer-hint{ display:none; }
+  }
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <!-- START SCREEN -->
+  <section id="start-screen" class="screen active">
+    <div class="card">
+      <div class="title-row"><span class="mole-emoji">⌨️</span><h1>Mole Math: Type Attack</h1></div>
+      <p class="subtitle">Solve it. Type it. Smash it.</p>
+
+      <p class="rules">
+        Every mole shows its own equation above its head. <b>Type the answer</b> into the box below and
+        press <b>SPACE</b> (or Enter) to smash the mole holding that answer. A wrong or unmatched answer
+        costs a life, so only submit when you're sure!
+      </p>
+
+      <div class="legend">
+        <span><i class="dot normal"></i>Normal — up 5s</span>
+        <span><i class="dot golden"></i>⭐ Golden — bonus, up 3s (~10% spawn)</span>
+        <span><i class="dot freeze"></i>❄️ Freeze — pauses timer 3s</span>
+        <span><i class="dot angry"></i>😠 Angry — stays until smashed, steals 5% score/3s</span>
+      </div>
+
+      <div class="field-row">
+        <div class="field-group">
+          <label for="opt-time">Time limit</label>
+          <select id="opt-time">
+            <option value="30">30 seconds</option>
+            <option value="60" selected>60 seconds</option>
+            <option value="90">90 seconds</option>
+            <option value="120">120 seconds</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label for="opt-lives">Lives</label>
+          <input id="opt-lives" type="number" min="1" max="9" value="3">
+        </div>
+        <div class="field-group">
+          <label for="opt-grid">Grid size</label>
+          <select id="opt-grid">
+            <option value="3" selected>3 × 3</option>
+            <option value="4">4 × 4</option>
+          </select>
+        </div>
+      </div>
+
+      <button class="btn" id="start-btn">Start Game</button>
+    </div>
+  </section>
+
+  <!-- GAME SCREEN -->
+  <section id="game-screen" class="screen">
+    <div class="hud">
+      <div class="hud-left" id="hud-left">🎯 Type the answer, press SPACE</div>
+      <div class="hud-mid">
+        <div class="hud-timer" id="hud-timer">60s</div>
+        <div class="hud-lives" id="hud-lives">❤️❤️❤️</div>
+      </div>
+      <div class="hud-right">
+        <div class="hud-score" id="hud-score">0</div>
+      </div>
+    </div>
+
+    <div class="meadow" id="meadow">
+      <div class="grid size-3" id="grid"></div>
+    </div>
+
+    <div class="answer-bar">
+      <input id="answer-input" type="text" inputmode="decimal" autocomplete="off" autocapitalize="off"
+             spellcheck="false" placeholder="Type the answer…" aria-label="Type your answer">
+      <div class="answer-hint"><kbd>SPACE</kbd><br>to smash</div>
+      <button class="btn small" id="submit-btn">Smash</button>
+    </div>
+    <p class="footnote">Numbers and decimals only — e.g. 12 or 3.5. Negative answers use a leading “-”.</p>
+  </section>
+
+  <!-- GAME OVER SCREEN -->
+  <section id="over-screen" class="screen">
+    <div class="card">
+      <h1 id="over-title">Time's up!</h1>
+      <p class="subtitle" id="over-subtitle">Nice typing.</p>
+      <div class="go-stats">
+        <div class="go-stat"><span class="num" id="over-score">0</span><span class="lbl">SCORE</span></div>
+        <div class="go-stat"><span class="num" id="over-solved">0</span><span class="lbl">SOLVED</span></div>
+        <div class="go-stat"><span class="num" id="over-best-streak">0</span><span class="lbl">BEST STREAK</span></div>
+      </div>
+      <button class="btn" id="restart-btn">Play Again</button>
+      <div style="height:10px"></div>
+      <button class="btn secondary" id="menu-btn">Change Settings</button>
+    </div>
+  </section>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const screens = {
+    start: document.getElementById('start-screen'),
+    game: document.getElementById('game-screen'),
+    over: document.getElementById('over-screen'),
+  };
+  const gridEl = document.getElementById('grid');
+  const meadowEl = document.getElementById('meadow');
+  const hudLeft = document.getElementById('hud-left');
+  const hudTimer = document.getElementById('hud-timer');
+  const hudLives = document.getElementById('hud-lives');
+  const hudScore = document.getElementById('hud-score');
+  const answerInput = document.getElementById('answer-input');
+  const submitBtn = document.getElementById('submit-btn');
+
+  document.getElementById('start-btn').addEventListener('click', startGame);
+  document.getElementById('restart-btn').addEventListener('click', () => startGame());
+  document.getElementById('menu-btn').addEventListener('click', () => showScreen('start'));
+  submitBtn.addEventListener('click', submitAnswer);
+
+  function showScreen(name){
+    Object.values(screens).forEach(s => s.classList.remove('active'));
+    screens[name].classList.add('active');
+  }
+
+  // ---------- CONFIG / STATE ----------
+  let cfg = { timeLimit:60, lives:3, gridSize:3 };
+  let state = null;
+  let timerInterval = null;
+  let spawnInterval = null;
+
+  const DUCK_MS = { normal:5000, golden:3000, freeze:5000 }; // angry never auto-ducks
+
+  function startGame(){
+    cfg.timeLimit = parseInt(document.getElementById('opt-time').value, 10);
+    let livesVal = parseInt(document.getElementById('opt-lives').value, 10);
+    if(isNaN(livesVal)) livesVal = 3;
+    cfg.lives = Math.min(9, Math.max(1, livesVal));
+    cfg.gridSize = parseInt(document.getElementById('opt-grid').value, 10);
+
+    const n = cfg.gridSize * cfg.gridSize;
+    state = {
+      timeLeft: cfg.timeLimit,
+      freezeRemaining: 0,
+      lives: cfg.lives,
+      score: 0,
+      solved: 0,
+      streak: 0,
+      bestStreak: 0,
+      holes: new Array(n).fill(null).map(() => ({ mole: null, el: null, moundEl: null })),
+      gameOver: false,
+    };
+
+    buildGrid();
+    updateHud();
+    showScreen('game');
+    answerInput.value = '';
+    answerInput.focus();
+
+    clearInterval(timerInterval);
+    clearInterval(spawnInterval);
+    timerInterval = setInterval(tick, 1000);
+    spawnInterval = setInterval(trySpawn, spawnRate());
+  }
+
+  function buildGrid(){
+    gridEl.className = 'grid size-' + cfg.gridSize;
+    gridEl.innerHTML = '';
+    state.holes.forEach((hole) => {
+      const holeDiv = document.createElement('div');
+      holeDiv.className = 'hole';
+      const mound = document.createElement('div');
+      mound.className = 'hole-mound';
+      const clip = document.createElement('div');
+      clip.className = 'hole-clip';
+      holeDiv.appendChild(mound);
+      holeDiv.appendChild(clip);
+      gridEl.appendChild(holeDiv);
+      hole.el = clip;
+      hole.moundEl = holeDiv;
+    });
+  }
+
+  // ---------- DIFFICULTY ----------
+  function level(){ return Math.floor(state.solved / 3); }
+
+  function spawnRate(){
+    const lvl = state ? level() : 0;
+    return Math.max(700, 1300 - lvl * 70);
+  }
+  function refreshSpawnRate(){
+    clearInterval(spawnInterval);
+    spawnInterval = setInterval(trySpawn, spawnRate());
+  }
+  function maxSimultaneous(){
+    const n = cfg.gridSize * cfg.gridSize;
+    return Math.min(n - 1, 2 + Math.floor(level() / 2));
+  }
+
+  // ---------- EQUATIONS ----------
+  function randInt(min, max){ return Math.floor(Math.random()*(max-min+1)) + min; }
+
+  function buildEquation(lvl, excludeAnswers){
+    for(let attempt=0; attempt<15; attempt++){
+      const ops = ['+','-'];
+      if(lvl >= 1) ops.push('*');
+      if(lvl >= 2) ops.push('/');
+      const op = ops[Math.floor(Math.random()*ops.length)];
+      let a,b,answer;
+
+      if(op === '+'){
+        const max = lvl >= 1 ? 30 : 12;
+        a = randInt(1, max); b = randInt(1, max);
+        answer = a + b;
+      } else if(op === '-'){
+        const max = lvl >= 1 ? 30 : 12;
+        a = randInt(1, max); b = randInt(1, max);
+        const allowNegative = lvl >= 2 && Math.random() < 0.3;
+        if(!allowNegative && b > a){ const t=a; a=b; b=t; }
+        answer = a - b;
+      } else if(op === '*'){
+        const max = lvl >= 3 ? 12 : 7;
+        a = randInt(2, max); b = randInt(2, max);
+        answer = a * b;
+      } else {
+        const useDecimal = lvl >= 3 && Math.random() < 0.35;
+        if(useDecimal){
+          const whole = randInt(1, lvl >= 4 ? 15 : 9);
+          a = whole * 2 + 1; b = 2;
+          answer = a / b;
+        } else {
+          const divisor = randInt(2, lvl >= 3 ? 10 : 6);
+          const quotient = randInt(2, lvl >= 3 ? 10 : 6);
+          a = divisor * quotient; b = divisor;
+          answer = quotient;
+        }
+      }
+      answer = Math.round(answer * 100) / 100;
+      const dupe = [...excludeAnswers].some(v => Math.abs(v - answer) < 0.001);
+      if(!dupe) return { text: a + ' ' + op + ' ' + b, answer, op };
+    }
+    // fallback (very unlikely): accept a duplicate rather than looping forever
+    const a = randInt(1,10), b = randInt(1,10);
+    return { text: a + ' + ' + b, answer: a + b, op:'+' };
+  }
+
+  // ---------- SPAWNING ----------
+  function trySpawn(){
+    if(!state || state.gameOver) return;
+    const activeHoles = state.holes.filter(h => h.mole);
+    if(activeHoles.length >= maxSimultaneous()) return;
+
+    const emptyIdx = state.holes.map((h,i) => h.mole ? -1 : i).filter(i => i >= 0);
+    if(emptyIdx.length === 0) return;
+    const idx = emptyIdx[Math.floor(Math.random()*emptyIdx.length)];
+
+    const angryActive = activeHoles.some(h => h.mole.type === 'angry');
+    const roll = Math.random();
+    let type;
+    const angryChance = angryActive ? 0 : 0.07;
+    const goldenChance = 0.10;
+    const freezeChance = 0.20;
+    if(roll < angryChance) type = 'angry';
+    else if(roll < angryChance + goldenChance) type = 'golden';
+    else if(roll < angryChance + goldenChance + freezeChance) type = 'freeze';
+    else type = 'normal';
+
+    const excludeAnswers = new Set(activeHoles.map(h => h.mole.answer));
+    const eq = buildEquation(level(), excludeAnswers);
+
+    spawnMole(idx, type, eq);
+  }
+
+  function spawnMole(idx, type, eq){
+    const hole = state.holes[idx];
+    const moleDiv = document.createElement('div');
+    moleDiv.className = 'mole ' + type;
+
+    const eqEl = document.createElement('div');
+    eqEl.className = 'mole-equation';
+    eqEl.textContent = eq.text;
+    moleDiv.appendChild(eqEl);
+
+    if(type === 'golden'){ const b=document.createElement('div'); b.className='mole-badge'; b.textContent='⭐'; moleDiv.appendChild(b); }
+    else if(type === 'freeze'){ const b=document.createElement('div'); b.className='mole-badge'; b.textContent='❄️'; moleDiv.appendChild(b); }
+    else if(type === 'angry'){ const b=document.createElement('div'); b.className='mole-badge'; b.textContent='😠'; moleDiv.appendChild(b); }
+
+    const body = document.createElement('div'); body.className='mole-body';
+    const nose = document.createElement('div'); nose.className='mole-nose';
+    const cl = document.createElement('div'); cl.className='mole-cheek-l';
+    const cr = document.createElement('div'); cr.className='mole-cheek-r';
+    body.appendChild(nose); body.appendChild(cl); body.appendChild(cr);
+    moleDiv.appendChild(body);
+
+    hole.el.appendChild(moleDiv);
+    requestAnimationFrame(() => moleDiv.classList.add('up'));
+
+    const spawnTime = performance.now();
+    let duckTimeout = null;
+    if(DUCK_MS[type]){
+      duckTimeout = setTimeout(() => duck(idx), DUCK_MS[type]);
+    }
+
+    let angryIntervalId = null;
+    if(type === 'angry'){
+      angryIntervalId = setInterval(() => stealScore(idx), 3000);
+    }
+
+    hole.mole = { type, answer: eq.answer, text: eq.text, el: moleDiv, spawnTime, duckTimeout, angryIntervalId };
+  }
+
+  function stealScore(idx){
+    const hole = state.holes[idx];
+    if(!hole.mole || hole.mole.type !== 'angry' || !state || state.gameOver) return;
+    const lost = Math.round(state.score * 0.05);
+    state.score = Math.max(0, state.score - lost);
+    showFx(hole, lost > 0 ? ('😠 -' + lost) : '😠', 'steal');
+    updateHud();
+  }
+
+  function duck(idx){
+    const hole = state.holes[idx];
+    if(!hole.mole) return;
+    const moleDiv = hole.mole.el;
+    moleDiv.classList.remove('up');
+    setTimeout(() => { if(moleDiv.parentNode) moleDiv.parentNode.removeChild(moleDiv); }, 200);
+    hole.mole = null;
+  }
+
+  function retractAll(){
+    state.holes.forEach((hole) => {
+      if(hole.mole){
+        if(hole.mole.duckTimeout) clearTimeout(hole.mole.duckTimeout);
+        if(hole.mole.angryIntervalId) clearInterval(hole.mole.angryIntervalId);
+        const moleDiv = hole.mole.el;
+        moleDiv.classList.remove('up');
+        setTimeout(() => { if(moleDiv.parentNode) moleDiv.parentNode.removeChild(moleDiv); }, 200);
+        hole.mole = null;
+      }
+    });
+  }
+
+  // ---------- INPUT HANDLING ----------
+  function sanitize(value){
+    const negative = value.trim().startsWith('-');
+    let digits = value.replace(/[^0-9.]/g, '');
+    const dot = digits.indexOf('.');
+    if(dot !== -1){
+      digits = digits.slice(0, dot+1) + digits.slice(dot+1).replace(/\./g, '');
+    }
+    return (negative ? '-' : '') + digits;
+  }
+
+  answerInput.addEventListener('input', () => {
+    const caretAtEnd = answerInput.selectionStart === answerInput.value.length;
+    answerInput.value = sanitize(answerInput.value);
+    if(caretAtEnd) answerInput.setSelectionRange(answerInput.value.length, answerInput.value.length);
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if(!screens.game.classList.contains('active')) return;
+    if(e.code === 'Space' || e.key === ' '){
+      e.preventDefault();
+      submitAnswer();
+    } else if(e.key === 'Enter'){
+      e.preventDefault();
+      submitAnswer();
+    }
+  });
+
+  function submitAnswer(){
+    if(!state || state.gameOver) return;
+    const raw = answerInput.value.trim();
+    answerInput.value = '';
+    answerInput.focus();
+    if(raw === '' || raw === '-' || raw === '.') return;
+    const typed = parseFloat(raw);
+    if(isNaN(typed)) return;
+
+    let matchIdx = -1;
+    state.holes.forEach((hole, i) => {
+      if(matchIdx === -1 && hole.mole && Math.abs(hole.mole.answer - typed) < 0.005){
+        matchIdx = i;
+      }
+    });
+
+    if(matchIdx !== -1){
+      smashMole(matchIdx);
+    } else {
+      wrongSubmit();
+    }
+    updateHud();
+  }
+
+  function smashMole(idx){
+    const hole = state.holes[idx];
+    const mole = hole.mole;
+    if(!mole) return;
+    if(mole.duckTimeout) clearTimeout(mole.duckTimeout);
+    if(mole.angryIntervalId) clearInterval(mole.angryIntervalId);
+
+    mole.el.classList.add('targeted');
+    const reaction = performance.now() - mole.spawnTime;
+
+    let points = 0;
+    let label = '';
+    if(mole.type === 'golden'){
+      points = 20 + (reaction < 800 ? 15 : reaction < 1600 ? 7 : 0);
+      label = '⭐';
+    } else if(mole.type === 'freeze'){
+      points = 8;
+      state.freezeRemaining += 3;
+      label = '❄️';
+    } else if(mole.type === 'angry'){
+      points = 25;
+      label = '😠';
+    } else {
+      points = 10 + (reaction < 1500 ? 10 : reaction < 3000 ? 5 : 0);
+      label = '';
+    }
+
+    state.streak++;
+    state.bestStreak = Math.max(state.bestStreak, state.streak);
+    const streakMult = 1 + Math.min(2, Math.floor(state.streak/5)) * 0.5;
+    points = Math.round(points * streakMult);
+    state.score += points;
+    state.solved++;
+
+    showFx(hole, label + '+' + points, 'good');
+    if(mole.type === 'freeze'){
+      showFx(hole, '❄️ frozen 3s', 'info');
+    }
+
+    setTimeout(() => {
+      mole.el.classList.remove('up');
+      mole.el.classList.add('smashed');
+      setTimeout(() => { if(mole.el.parentNode) mole.el.parentNode.removeChild(mole.el); }, 160);
+    }, 90);
+    hole.mole = null;
+
+    refreshHudLeft();
+    refreshSpawnRate();
+  }
+
+  function wrongSubmit(){
+    state.lives--;
+    state.streak = 0;
+    shakeField();
+    hudLeft.textContent = '✗ No mole matches that answer';
+    hudLeft.style.color = 'var(--bad)';
+    setTimeout(refreshHudLeft, 1200);
+    if(state.lives <= 0) endGame('lives');
+  }
+
+  function refreshHudLeft(){
+    hudLeft.style.color = '';
+    if(!state) return;
+    hudLeft.textContent = state.streak >= 3 ? ('🔥 ' + state.streak + ' streak!') : '🎯 Type the answer, press SPACE';
+  }
+
+  function showFx(hole, text, cls){
+    const fx = document.createElement('div');
+    fx.className = 'fx ' + cls;
+    fx.textContent = text;
+    hole.moundEl.style.position = 'relative';
+    hole.moundEl.appendChild(fx);
+    setTimeout(() => { if(fx.parentNode) fx.parentNode.removeChild(fx); }, 700);
+  }
+
+  function shakeField(){
+    meadowEl.classList.remove('shake');
+    void meadowEl.offsetWidth;
+    meadowEl.classList.add('shake');
+  }
+
+  // ---------- TIMER / HUD ----------
+  function tick(){
+    if(!state || state.gameOver) return;
+    if(state.freezeRemaining > 0){
+      state.freezeRemaining--;
+    } else {
+      state.timeLeft--;
+    }
+    if(state.timeLeft <= 0){
+      state.timeLeft = 0;
+      updateHud();
+      endGame('time');
+      return;
+    }
+    updateHud();
+  }
+
+  function updateHud(){
+    hudTimer.textContent = state.timeLeft + 's';
+    hudTimer.classList.toggle('low', state.timeLeft <= 10 && state.freezeRemaining === 0);
+    hudTimer.classList.toggle('frozen', state.freezeRemaining > 0);
+    if(state.freezeRemaining > 0) hudTimer.textContent = '❄️ ' + state.timeLeft + 's';
+    hudLives.textContent = '❤️'.repeat(Math.max(0,state.lives)) + '🖤'.repeat(Math.max(0, cfg.lives - state.lives));
+    hudScore.textContent = state.score;
+  }
+
+  function endGame(reason){
+    if(state.gameOver) return;
+    state.gameOver = true;
+    clearInterval(timerInterval);
+    clearInterval(spawnInterval);
+    retractAll();
+
+    document.getElementById('over-title').textContent = reason === 'lives' ? 'Out of lives!' : "Time's up!";
+    document.getElementById('over-subtitle').textContent =
+      state.solved === 0 ? 'Every equation counts — give it another go!' :
+      state.solved < 5 ? 'Good start — keep typing!' :
+      state.solved < 12 ? 'Sharp math and quick fingers!' :
+      'Mole Math typing champion!';
+    document.getElementById('over-score').textContent = state.score;
+    document.getElementById('over-solved').textContent = state.solved;
+    document.getElementById('over-best-streak').textContent = state.bestStreak;
+
+    showScreen('over');
+  }
+
+})();
+</script>
+</body>
+</html>
